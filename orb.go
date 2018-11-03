@@ -1,6 +1,8 @@
 package orb
 
-type PerformerId int
+import "time"
+
+type PerformerId string
 
 type Word string
 
@@ -9,7 +11,6 @@ type Slot int
 const (
 	Left Slot = iota
 	Right
-	Self
 )
 
 type Address struct {
@@ -75,26 +76,92 @@ type RoutedMessage struct {
 	Message Word
 }
 
+type ReceivedWord struct {
+	Word Word
+	Time time.Time
+}
+
 type PerformerMailbox struct {
-	Left  *Word
-	Right *Word
-	Self  *Word
+	Left  *ReceivedWord
+	Right *ReceivedWord
 }
 
 func (m *PerformerMailbox) Receive(msg RoutedMessage) {
 	switch msg.Address.Slot {
 	case Left:
-		m.Left = &msg.Message
+		m.Left = &ReceivedWord{msg.Message, time.Now()}
 		break
 	case Right:
-		m.Right = &msg.Message
-		break
-	case Self:
-		m.Self = &msg.Message
+		m.Right = &ReceivedWord{msg.Message, time.Now()}
 		break
 	}
 }
 
+func (m *PerformerMailbox) Empty() bool {
+	return m.Left == nil && m.Right == nil
+}
+
 type Script []Word
 
+func (s Script) Current() Word {
+	return s[0]
+}
+
+func (s Script) Advance() {
+	s = s[1:]
+}
+
 type ScriptDB map[PerformerId]Script
+
+func Perform(mb *PerformerMailbox, s *Script) Word {
+	if mb.Empty() {
+		return s.Current()
+	}
+	
+	if mb.Left.Word == mb.Right.Word {
+		s.Advance()
+		return s.Current()
+	}
+
+	if mb.Left.Time.Sub(mb.Right.Time).Nanoseconds() > 0 {
+		return mb.Left.Word
+	}
+
+	return mb.Right.Word
+}
+
+type SpokenWord struct {
+	Word Word
+	Performer PerformerId
+}
+
+func PerformLoop(id PerformerId, router *PerformerRouter, scripts *ScriptDB) (<-chan *SpokenWord, chan<- bool) {
+	words := make(chan *SpokenWord)
+	stop := make(chan bool)
+	
+	go func() {
+		defer close(words)
+		var speakTime time.Time
+		var done bool
+		for !done {
+			select {
+			case done <-stop:
+			default:
+				now = time.Now()
+				if now > speakTime {
+					word := Perform(router[id], scripts[id])
+					speakTime = reschedule(now)
+					words <- word
+				} else {
+					
+				}				
+			}
+		}
+	}()
+
+	return words
+}
+
+func reschedule(now time.Time) time.Time {
+	return now
+}
