@@ -1,7 +1,6 @@
 package orb
 
 import (
-	"fmt"
 	"time"
 )
 
@@ -135,6 +134,10 @@ func (s Script) Done() bool {
 	return len(s) <= 0
 }
 
+func (s *Script) Finish() {
+	*s = []Word{}
+}
+
 func (s Script) Copy() *Script {
 	out := make(Script, len(s))
 	for i, s := range s {
@@ -157,25 +160,20 @@ func (d ScriptDB) AllDone() bool {
 
 type Time int
 
-type Performer interface {
-	Perform(Time, *Mailbox, *Script) (*SentMessage, bool)
+type Performer struct {
+	Id            PerformerId
+	ShouldPerform func(Time) bool
 }
 
 type PerformerDB map[PerformerId]Performer
 
-// maybe this "Performer" interface should just be performer checks
-type MeteredPerformer struct {
-	Id    PerformerId
-	Meter Time
-}
-
-func (p MeteredPerformer) Perform(t Time, mb *Mailbox, s *Script) (*SentMessage, bool) {
-	if t%p.Meter != 0 {
-		return nil, false
-	}
-
+func (p Performer) Perform(t Time, mb *Mailbox, s *Script) (*SentMessage, bool) {
 	if s.Done() {
 		return &SentMessage{p.Id, Done}, true
+	}
+
+	if p.ShouldPerform(t) {
+		return nil, false
 	}
 
 	if mb.Empty() {
@@ -183,33 +181,21 @@ func (p MeteredPerformer) Perform(t Time, mb *Mailbox, s *Script) (*SentMessage,
 	}
 
 	if mb.Left == nil {
-		if mb.Right.Word == Done {
-			return &SentMessage{p.Id, s.Current()}, true
-		}
-
 		return &SentMessage{p.Id, mb.Right.Word}, true
 	}
 
 	if mb.Right == nil {
-		if mb.Left.Word == Done {
-			return &SentMessage{p.Id, s.Current()}, true
-		}
-
 		return &SentMessage{p.Id, mb.Left.Word}, true
 	}
 
-	if mb.Left.Word == mb.Right.Word {
-		fmt.Printf("%s advances\n", p.Id)
-		s.Advance()
+	if mb.Left.Word == Done || mb.Right.Word == Done {
+		s.Finish()
 		return &SentMessage{p.Id, s.Current()}, true
 	}
 
-	if mb.Left.Word == Done {
-		return &SentMessage{p.Id, mb.Right.Word}, true
-	}
-
-	if mb.Right.Word == Done {
-		return &SentMessage{p.Id, mb.Left.Word}, true
+	if mb.Left.Word == mb.Right.Word {
+		s.Advance()
+		return &SentMessage{p.Id, s.Current()}, true
 	}
 
 	if mb.Left.Time.Sub(mb.Right.Time).Nanoseconds() > 0 {
@@ -217,6 +203,10 @@ func (p MeteredPerformer) Perform(t Time, mb *Mailbox, s *Script) (*SentMessage,
 	}
 
 	return &SentMessage{p.Id, mb.Right.Word}, true
+}
+
+func Meter(meter Time) func(Time) bool {
+	return func(t Time) bool { return t%meter != 0 }
 }
 
 // type PerformanceTimer struct {

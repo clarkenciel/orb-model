@@ -14,12 +14,6 @@ func main() {
 		"harry",
 	}
 
-	// 	script := orb.Script{
-	// 		"one",
-	// 		"two",
-	// p		"three",
-	// 	}
-
 	router := orb.PerformerRouter{
 		"tom": orb.AddressSet{
 			orb.Address{"dick", orb.Left}:   true,
@@ -42,18 +36,19 @@ func main() {
 	}
 
 	scripts := orb.ScriptDB{
-		"tom":   &orb.Script{"one", "two", "three"},
-		"dick":  &orb.Script{"one", "two", "three"},
-		"harry": &orb.Script{"one", "two", "three"},
+		"tom":   &orb.Script{"one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"},
+		"dick":  &orb.Script{"one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"},
+		"harry": &orb.Script{"one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"},
 	}
 
 	performers := orb.PerformerDB{
-		"tom":   orb.MeteredPerformer{"tom", 1},
-		"dick":  orb.MeteredPerformer{"dick", 3},
-		"harry": orb.MeteredPerformer{"harry", 7},
+		"tom":   orb.Performer{"tom", orb.Meter(2)},
+		"dick":  orb.Performer{"dick", orb.Meter(3)},
+		"harry": orb.Performer{"harry", orb.Meter(7)},
 	}
 
-	for i := 1; !scripts.AllDone(); i++ { // should not start a 0 for this
+	printHeader(ids)
+	for i := 1; !scripts.AllDone(); i++ {
 		// speaking phase
 		var messages []*orb.SentMessage
 		for _, id := range ids {
@@ -79,7 +74,7 @@ func main() {
 			}
 		}
 
-		printMessages(i, messages)
+		printMessages(i, ids, indexMessages(messages))
 
 		// routing phase
 		var routed []*orb.RoutedMessage
@@ -103,31 +98,65 @@ func main() {
 	}
 }
 
-func printMessages(g int, ms []*orb.SentMessage) {
+func indexMessages(ms []*orb.SentMessage) map[orb.PerformerId]orb.Word {
+	index := make(map[orb.PerformerId]orb.Word)
+	for _, m := range ms {
+		index[m.Sender] = m.Message
+	}
+	return index
+}
+
+const RowItemSize = 10
+
+func padded(padding int, formatSigil string) string {
+	return fmt.Sprintf("%%%d%s", padding, formatSigil)
+}
+
+func printHeader(ids []orb.PerformerId) {
+	fmtStr := padded(RowItemSize, "s |")
+
 	var header strings.Builder
+
+	_, e := header.WriteString(fmt.Sprintf(fmtStr, " "))
+	if e != nil {
+		return
+	}
+
+	for _, id := range ids {
+		_, e := header.WriteString(fmt.Sprintf(fmtStr, id))
+		if e != nil {
+			return
+		}
+	}
+
+	fmt.Println(header.String())
+}
+
+func printMessages(g int, ids []orb.PerformerId, ms map[orb.PerformerId]orb.Word) {
 	var row strings.Builder
 
-	_, e := header.WriteString(fmt.Sprintf("%10d. |", g))
+	_, e := row.WriteString(fmt.Sprintf(padded(RowItemSize, "d |"), g))
 	if e != nil {
 		return
 	}
 
-	_, e = row.WriteString(fmt.Sprintf("%10s |", " "))
-	if e != nil {
-		return
-	}
+	fmtStr := padded(RowItemSize, "s |")
+	for _, id := range ids {
+		m, found := ms[id]
+		if found {
+			_, e = row.WriteString(fmt.Sprintf(fmtStr, m))
+			if e != nil {
+				return
+			}
 
-	for _, m := range ms {
-		_, e := header.WriteString(fmt.Sprintf("%10s|", m.Sender))
+			continue
+		}
+
+		_, e = row.WriteString(fmt.Sprintf(fmtStr, " "))
 		if e != nil {
 			return
 		}
-
-		_, e = row.WriteString(fmt.Sprintf("%10s|", m.Message))
-		if e != nil {
-			return
-		}
 	}
 
-	fmt.Println(header.String(), "\n", row.String())
+	fmt.Println(row.String())
 }
