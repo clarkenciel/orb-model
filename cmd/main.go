@@ -2,22 +2,28 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"strings"
+	"time"
 
 	orb "github.com/clarkenciel/orb-model"
 )
 
 func main() {
+	rand.Seed(time.Now().Unix())
 	ids := []orb.PerformerId{
 		"tom",
 		"dick",
 		"harry",
+		"mary",
+		"sue",
+		"thanos",
 	}
 
 	router := orb.PerformerRouter{
 		"tom": orb.AddressSet{
-			orb.Address{"dick", orb.Left}:   true,
-			orb.Address{"harry", orb.Right}: true,
+			orb.Address{"sue", orb.Left}:     true,
+			orb.Address{"thanos", orb.Right}: true,
 		},
 		"dick": orb.AddressSet{
 			orb.Address{"harry", orb.Left}: true,
@@ -27,24 +33,45 @@ func main() {
 			orb.Address{"tom", orb.Left}:   true,
 			orb.Address{"dick", orb.Right}: true,
 		},
+		"mary": orb.AddressSet{
+			orb.Address{"dick", orb.Left}:   true,
+			orb.Address{"thanos", orb.Left}: true,
+		},
+		"sue": orb.AddressSet{
+			orb.Address{"harry", orb.Right}: true,
+			orb.Address{"mary", orb.Right}:  true,
+		},
+		"thanos": orb.AddressSet{
+			orb.Address{"mary", orb.Left}: true,
+			orb.Address{"sue", orb.Right}: true,
+		},
 	}
 
 	mailRoom := orb.MailRoom{
-		"tom":   &orb.Mailbox{},
-		"dick":  &orb.Mailbox{},
-		"harry": &orb.Mailbox{},
+		"tom":    &orb.Mailbox{},
+		"dick":   &orb.Mailbox{},
+		"harry":  &orb.Mailbox{},
+		"mary":   &orb.Mailbox{},
+		"sue":    &orb.Mailbox{},
+		"thanos": &orb.Mailbox{},
 	}
 
 	scripts := orb.ScriptDB{
-		"tom":   &orb.Script{"one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"},
-		"dick":  &orb.Script{"one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"},
-		"harry": &orb.Script{"one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"},
+		"tom":    &orb.Script{"one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"},
+		"dick":   &orb.Script{"one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"},
+		"harry":  &orb.Script{"one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"},
+		"mary":   &orb.Script{"one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"},
+		"sue":    &orb.Script{"one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"},
+		"thanos": &orb.Script{"one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"},
 	}
 
 	performers := orb.PerformerDB{
-		"tom":   orb.Performer{"tom", orb.Meter(2)},
-		"dick":  orb.Performer{"dick", orb.Meter(3)},
-		"harry": orb.Performer{"harry", orb.Meter(7)},
+		"tom":    orb.Performer{"tom", orb.Meter(orb.Time(1 + rand.Intn(20)))},
+		"dick":   orb.Performer{"dick", orb.Meter(orb.Time(1 + rand.Intn(20)))},
+		"harry":  orb.Performer{"harry", orb.Meter(orb.Time(1 + rand.Intn(20)))},
+		"mary":   orb.Performer{"mary", orb.Meter(orb.Time(1 + rand.Intn(20)))},
+		"sue":    orb.Performer{"sue", orb.Meter(orb.Time(1 + rand.Intn(20)))},
+		"thanos": orb.Performer{"thanos", orb.Meter(orb.Time(1 + rand.Intn(20)))},
 	}
 
 	printHeader(ids)
